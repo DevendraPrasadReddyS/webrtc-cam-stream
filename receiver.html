@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head><title>Receiver</title></head>
+<body>
+  <h3>🎥 Receiving Stream</h3>
+  <video id="remoteVideo" autoplay playsinline></video>
+
+  <script>
+    const remoteVideo = document.getElementById('remoteVideo');
+    const ws = new WebSocket('ws://localhost:8765');
+    const pc = new RTCPeerConnection();
+
+    pc.ontrack = (e) => {
+      remoteVideo.srcObject = e.streams[0];
+    };
+
+    pc.onicecandidate = e => {
+      if (e.candidate) {
+        ws.send(JSON.stringify({ type: 'candidate', candidate: e.candidate }));
+      }
+    };
+
+    ws.onmessage = async (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'offer') {
+        await pc.setRemoteDescription(data.offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        ws.send(JSON.stringify({ type: 'answer', answer }));
+      } else if (data.type === 'candidate') {
+        await pc.addIceCandidate(data.candidate);
+      }
+    };
+  </script>
+</body>
+</html>
