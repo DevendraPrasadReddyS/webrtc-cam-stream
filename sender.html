@@ -7,7 +7,7 @@
 
   <script>
     const localVideo = document.getElementById('localVideo');
-    const ws = new WebSocket('ws://localhost:8765');
+    const ws = new WebSocket('ws://192.168.1.35:8765');
     const pc = new RTCPeerConnection();
 
     navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(stream => {
