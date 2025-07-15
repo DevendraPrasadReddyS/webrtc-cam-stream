@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head><title>Sender</title></head>
+<body>
+  <h3>📷 Camera Stream</h3>
+  <video id="localVideo" autoplay muted playsinline></video>
+
+  <script>
+    const localVideo = document.getElementById('localVideo');
+    const ws = new WebSocket('ws://localhost:8765');
+    const pc = new RTCPeerConnection();
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(stream => {
+      localVideo.srcObject = stream;
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    });
+
+    pc.onicecandidate = e => {
+      if (e.candidate) {
+        ws.send(JSON.stringify({ type: 'candidate', candidate: e.candidate }));
+      }
+    };
+
+    ws.onmessage = async (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'answer') {
+        await pc.setRemoteDescription(data.answer);
+      } else if (data.type === 'candidate') {
+        await pc.addIceCandidate(data.candidate);
+      }
+    };
+
+    ws.onopen = async () => {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      ws.send(JSON.stringify({ type: 'offer', offer }));
+    };
+  </script>
+</body>
+</html>
